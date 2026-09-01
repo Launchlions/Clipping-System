@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Instagram, 
+  Camera, 
   CreditCard, 
   FileText, 
   ShieldCheck, 
@@ -132,7 +132,7 @@ export default function ClipperSettingsPage() {
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white">
-                  <Instagram className="h-4 w-4" />
+                  <Camera className="h-4 w-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary">Instagram Graph API Connection</h3>
