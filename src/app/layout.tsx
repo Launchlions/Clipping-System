@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import localFont from 'next/font/local';
 import './globals.css';
 
 import { Inter, Roboto_Mono } from 'next/font/google';
@@ -17,6 +16,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://clipbridge.vercel.app'),
   title: 'ClipBridge',
   description: 'The trusted marketplace connecting brands with content creators',
 };
