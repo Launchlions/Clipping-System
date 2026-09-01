@@ -78,7 +78,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "clipbridge-jwt-production-secret-key-99a8x12Zv",
 }
 
 export function getServerSession() {
