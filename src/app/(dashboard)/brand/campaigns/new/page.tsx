@@ -81,6 +81,8 @@ export default function NewCampaignWizard() {
       setDonts([...donts, newDont.trim()]);
       setNewDont('');
     }
+  };
+
   const handleLaunch = async () => {
     try {
       setLoading(true);
