@@ -633,11 +633,11 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6">
-            <Link href="/brand/dashboard" className="hover:text-text-primary">Brand Sandbox</Link>
-            <Link href="/clipper/marketplace" className="hover:text-text-primary">Clipper Sandbox</Link>
-            <Link href="/admin/dashboard" className="hover:text-text-primary">Admin Sandbox</Link>
-            <a href="#" className="hover:text-text-primary">Terms of Service</a>
-            <a href="#" className="hover:text-text-primary">Escrow Protocol Policy</a>
+            <Link href="/terms" className="hover:text-text-primary transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/brand/dashboard" className="hover:text-text-primary">Brand Hub</Link>
+            <Link href="/clipper/marketplace" className="hover:text-text-primary">Creator Hub</Link>
+            <Link href="/admin/dashboard" className="hover:text-text-primary">Admin</Link>
           </div>
         </div>
       </footer>
