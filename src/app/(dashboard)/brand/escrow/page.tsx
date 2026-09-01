@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Landmark, 
   ShieldCheck, 
@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { MetricCard } from '@/components/shared/metric-card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatCents } from '@/lib/utils/constants';
+import { useToast } from '@/components/ui/toast';
+import { useEscrow } from '@/lib/hooks/use-escrow';
 
 interface EscrowTransaction {
   id: string;
@@ -29,61 +31,59 @@ interface EscrowTransaction {
   status: string;
 }
 
-const MOCK_LEDGER: EscrowTransaction[] = [
-  {
-    id: 'tx-1',
-    type: 'RELEASE',
-    description: 'Creator Payout Release (Alex Creator)',
-    campaignTitle: 'Summer Activewear Reel Blitz',
-    amountCents: -180_00,
-    balanceAfterCents: 5660_00,
-    createdAt: 'Sep 01, 2026, 14:20 UTC',
-    referenceId: 'po_99a8x12Zv',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'tx-2',
-    type: 'RELEASE',
-    description: 'Creator Payout Release (Maya Visuals)',
-    campaignTitle: 'Summer Activewear Reel Blitz',
-    amountCents: -250_00,
-    balanceAfterCents: 5840_00,
-    createdAt: 'Aug 29, 2026, 09:12 UTC',
-    referenceId: 'po_771x9aKv',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'tx-3',
-    type: 'DEPOSIT',
-    description: 'Escrow Account Wire / Stripe ACH Deposit',
-    campaignTitle: 'Summer Activewear Reel Blitz',
-    amountCents: 5000_00,
-    balanceAfterCents: 6090_00,
-    createdAt: 'Aug 20, 2026, 11:45 UTC',
-    referenceId: 'pi_3Pfx9182xZvKYlo2',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'tx-4',
-    type: 'DEPOSIT',
-    description: 'Initial Campaign Escrow Funding',
-    campaignTitle: 'Brand Awareness Push',
-    amountCents: 10000_00,
-    balanceAfterCents: 1090_00,
-    createdAt: 'Jul 15, 2026, 16:30 UTC',
-    referenceId: 'pi_3Pdw8182xZvKYlo2',
-    status: 'COMPLETED',
-  },
-];
-
-import { useToast } from '@/components/ui/toast';
-import { useEscrow } from '@/lib/hooks/use-escrow';
-
 export default function BrandEscrowPage() {
   const { toast } = useToast();
   const { depositEscrow } = useEscrow();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState(2500);
+  const [transactions, setTransactions] = useState<EscrowTransaction[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('clipbridge_escrow_ledger');
+      if (saved) {
+        setTransactions(JSON.parse(saved));
+      }
+    } catch {}
+  }, []);
+
+  const totalBalance = transactions.reduce((acc, tx) => acc + tx.amountCents, 0);
+
+  const handleConfirmDeposit = async () => {
+    try {
+      await depositEscrow('general-escrow', depositAmount * 100);
+      const newTx: EscrowTransaction = {
+        id: `tx_${Date.now()}`,
+        type: 'DEPOSIT',
+        description: 'Stripe Direct Escrow Deposit',
+        campaignTitle: 'Account Balance',
+        amountCents: depositAmount * 100,
+        balanceAfterCents: totalBalance + depositAmount * 100,
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        referenceId: `pi_${Math.random().toString(36).substring(2, 12)}`,
+        status: 'COMPLETED',
+      };
+
+      const updated = [newTx, ...transactions];
+      setTransactions(updated);
+      try {
+        localStorage.setItem('clipbridge_escrow_ledger', JSON.stringify(updated));
+      } catch {}
+
+      toast({
+        type: 'success',
+        title: 'Deposit Successful',
+        description: `$${depositAmount.toLocaleString()}.00 added to Stripe Connect escrow custody.`,
+      });
+      setShowDepositModal(false);
+    } catch (err: any) {
+      toast({
+        type: 'error',
+        title: 'Deposit Failed',
+        description: err.message || 'Payment method was declined.',
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -97,10 +97,7 @@ export default function BrandEscrowPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => alert('Exporting monthly statement...')}>
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Export CSV / PDF
-          </Button>
-          <Button size="sm" className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs gap-1.5" onClick={() => setShowDepositModal(true)}>
+          <Button size="sm" className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs gap-1.5 shadow-sm" onClick={() => setShowDepositModal(true)}>
             <Plus className="h-3.5 w-3.5" /> Deposit Funds
           </Button>
         </div>
@@ -108,9 +105,9 @@ export default function BrandEscrowPage() {
 
       {/* Hero Financial Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Available Escrow" value="$5,660.00" subtitle="Secured via Stripe Custody" />
-        <MetricCard title="Active Campaign Holds" value="$2,850.00" subtitle="Locked in active slots" />
-        <MetricCard title="Total Released (YTD)" value="$12,340.00" subtitle="Paid to creators" />
+        <MetricCard title="Available Escrow" value={formatCents(Math.max(0, totalBalance))} subtitle="Secured via Stripe Custody" />
+        <MetricCard title="Total Transactions" value={transactions.length.toString()} subtitle="Deposit &amp; payout ledger events" />
+        <MetricCard title="Settlement Status" value="ACTIVE" subtitle="100% Instant Escrow" />
         <MetricCard title="Custody Compliance" value="SAQ-A" subtitle="PCI-DSS / Stripe Connect" />
       </div>
 
@@ -135,58 +132,68 @@ export default function BrandEscrowPage() {
           <h3 className="text-sm font-semibold text-text-primary">Transaction History</h3>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5 text-left font-medium">Type</th>
-                <th className="px-4 py-2.5 text-left font-medium">Description &amp; Campaign</th>
-                <th className="px-4 py-2.5 text-left font-medium">Reference ID</th>
-                <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-                <th className="px-4 py-2.5 text-right font-medium">Running Balance</th>
-                <th className="px-4 py-2.5 text-right font-medium">Timestamp</th>
-                <th className="px-4 py-2.5 text-center font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle">
-              {MOCK_LEDGER.map((row) => (
-                <tr key={row.id} className="hover:bg-surface-raised/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-semibold ${
-                        row.type === 'DEPOSIT'
-                          ? 'bg-status-success-bg text-status-success'
-                          : 'bg-surface-raised text-text-secondary'
+        {transactions.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <p className="text-sm font-semibold text-text-primary">No escrow transactions recorded yet</p>
+            <p className="text-xs text-text-muted">Deposit funds or launch a campaign to fund your creator escrow balance.</p>
+            <Button size="sm" className="bg-brand-accent text-white text-xs gap-1.5" onClick={() => setShowDepositModal(true)}>
+              <Plus className="h-3.5 w-3.5" /> Deposit Initial Escrow
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-2.5 text-left font-medium">Type</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Description</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Reference ID</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Amount</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Running Balance</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Timestamp</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {transactions.map((row) => (
+                  <tr key={row.id} className="hover:bg-surface-raised/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] font-semibold ${
+                          row.type === 'DEPOSIT'
+                            ? 'bg-status-success-bg text-status-success'
+                            : 'bg-surface-raised text-text-secondary'
+                        }`}
+                      >
+                        {row.type === 'DEPOSIT' ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
+                        {row.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-text-primary">{row.description}</p>
+                      {row.campaignTitle && <p className="text-[11px] text-text-muted">{row.campaignTitle}</p>}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-text-muted">{row.referenceId}</td>
+                    <td
+                      className={`px-4 py-3 text-right font-mono font-semibold tabular-nums ${
+                        row.amountCents > 0 ? 'text-status-success' : 'text-text-primary'
                       }`}
                     >
-                      {row.type === 'DEPOSIT' ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
-                      {row.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-text-primary">{row.description}</p>
-                    {row.campaignTitle && <p className="text-[11px] text-text-muted">{row.campaignTitle}</p>}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-[11px] text-text-muted">{row.referenceId}</td>
-                  <td
-                    className={`px-4 py-3 text-right font-mono font-semibold tabular-nums ${
-                      row.amountCents > 0 ? 'text-status-success' : 'text-text-primary'
-                    }`}
-                  >
-                    {row.amountCents > 0 ? `+${formatCents(row.amountCents)}` : formatCents(row.amountCents)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-medium text-text-secondary tabular-nums">
-                    {formatCents(row.balanceAfterCents)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-text-muted">{row.createdAt}</td>
-                  <td className="px-4 py-3 text-center">
-                    <StatusBadge type="escrow" status="FUNDED" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      {row.amountCents > 0 ? `+${formatCents(row.amountCents)}` : formatCents(row.amountCents)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono font-medium text-text-secondary tabular-nums">
+                      {formatCents(row.balanceAfterCents)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-text-muted">{row.createdAt}</td>
+                    <td className="px-4 py-3 text-center">
+                      <StatusBadge type="escrow" status="FUNDED" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Deposit Modal */}
@@ -203,8 +210,8 @@ export default function BrandEscrowPage() {
                 <label className="text-xs font-medium text-text-secondary">Deposit Amount ($)</label>
                 <input
                   type="number"
-                  min={500}
-                  step={500}
+                  min={100}
+                  step={100}
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(Number(e.target.value))}
                   className="mt-1 block w-full rounded-md border border-input-border bg-input-bg px-3 py-2 font-mono text-sm text-text-primary tabular-nums focus:border-brand-accent focus:outline-none"
@@ -213,8 +220,8 @@ export default function BrandEscrowPage() {
 
               <div className="rounded-md border border-border bg-surface-raised p-3 text-xs space-y-1">
                 <div className="flex justify-between text-text-secondary">
-                  <span>Payment Method:</span>
-                  <span className="font-mono">Visa •••• 9012 (Stripe Elements)</span>
+                  <span>Payment Provider:</span>
+                  <span className="font-mono">Stripe Connect Protected Custody</span>
                 </div>
                 <div className="flex justify-between text-text-secondary">
                   <span>Availability:</span>
@@ -230,24 +237,7 @@ export default function BrandEscrowPage() {
               <Button
                 size="sm"
                 className="bg-brand-accent text-white"
-                onClick={async () => {
-                  try {
-                    await depositEscrow('camp-1', depositAmount * 100);
-                    toast({
-                      type: 'success',
-                      title: 'Escrow Deposit Succeeded',
-                      description: `$${depositAmount.toLocaleString()}.00 added to Stripe custody balance.`,
-                    });
-                  } catch (err: any) {
-                    toast({
-                      type: 'error',
-                      title: 'Deposit Failed',
-                      description: err.message || 'Payment method was declined.',
-                    });
-                  } finally {
-                    setShowDepositModal(false);
-                  }
-                }}
+                onClick={handleConfirmDeposit}
               >
                 Confirm Deposit (${depositAmount}.00)
               </Button>

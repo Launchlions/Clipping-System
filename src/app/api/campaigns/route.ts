@@ -21,62 +21,10 @@ export interface ServerCampaign {
   createdAt: string;
 }
 
-// Global persistent in-memory store across Next.js API requests
-const globalCampaigns = (globalThis as any).__clipbridge_campaigns || [
-  {
-    id: 'camp-1',
-    title: 'Summer Activewear Reel Blitz',
-    brandName: 'ActiveWear Official',
-    niche: 'Fitness',
-    payoutType: 'HYBRID',
-    payoutAmountCents: 100_00,
-    cpmRateCents: 15_00,
-    budgetCents: 5000_00,
-    budgetSpentCents: 2150_00,
-    slotsTotal: 10,
-    slotsClaimed: 7,
-    status: 'ACTIVE',
-    escrowStatus: 'FUNDED',
-    attributionWindowDays: 7,
-    createdAt: '2026-08-20T10:00:00Z',
-  },
-  {
-    id: 'camp-2',
-    title: 'Glow Serum Before & After Challenge',
-    brandName: 'Lumiere Beauty',
-    niche: 'Beauty',
-    payoutType: 'PER_POST',
-    payoutAmountCents: 250_00,
-    cpmRateCents: 0,
-    budgetCents: 3000_00,
-    budgetSpentCents: 1250_00,
-    slotsTotal: 8,
-    slotsClaimed: 5,
-    status: 'ACTIVE',
-    escrowStatus: 'FUNDED',
-    attributionWindowDays: 7,
-    createdAt: '2026-08-25T14:30:00Z',
-  },
-  {
-    id: 'camp-3',
-    title: 'Minimalist EDC Tech Gear Review Clips',
-    brandName: 'Apex Everyday',
-    niche: 'Tech',
-    payoutType: 'CPM',
-    payoutAmountCents: 0,
-    cpmRateCents: 20_00,
-    budgetCents: 4000_00,
-    budgetSpentCents: 850_00,
-    slotsTotal: 5,
-    slotsClaimed: 4,
-    status: 'ACTIVE',
-    escrowStatus: 'FUNDED',
-    attributionWindowDays: 14,
-    createdAt: '2026-08-28T09:15:00Z',
-  },
-];
-
-(globalThis as any).__clipbridge_campaigns = globalCampaigns;
+// Clean production/beta in-memory store
+if (!(globalThis as any).__clipbridge_campaigns) {
+  (globalThis as any).__clipbridge_campaigns = [];
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -115,11 +63,11 @@ export async function POST(req: NextRequest) {
     const newCampaign: ServerCampaign = {
       id: `camp_${Date.now()}`,
       title: body.title,
-      brandName: session?.user?.name || 'ActiveWear Official',
-      niche: body.niche || 'Fitness',
+      brandName: body.brandName || session?.user?.name || 'Brand Partner',
+      niche: body.niche || 'General',
       payoutType: body.payoutType || 'PER_POST',
-      payoutAmountCents: body.payoutAmountCents || 100_00,
-      cpmRateCents: body.cpmRateCents || 0,
+      payoutAmountCents: Number(body.payoutAmountCents) || 100_00,
+      cpmRateCents: Number(body.cpmRateCents) || 0,
       budgetCents: Number(body.budgetCents),
       budgetSpentCents: 0,
       slotsTotal: Number(body.slotsTotal) || 10,
@@ -130,7 +78,6 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    // Prepend to persistent memory store
     (globalThis as any).__clipbridge_campaigns.unshift(newCampaign);
 
     return NextResponse.json(

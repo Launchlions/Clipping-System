@@ -20,60 +20,6 @@ export interface CampaignData {
   createdAt: string;
 }
 
-const DEFAULT_CAMPAIGNS: CampaignData[] = [
-  {
-    id: 'camp-1',
-    title: 'Summer Activewear Reel Blitz',
-    brandName: 'ActiveWear Official',
-    niche: 'Fitness',
-    payoutType: 'HYBRID',
-    payoutAmountCents: 100_00,
-    cpmRateCents: 15_00,
-    budgetCents: 5000_00,
-    budgetSpentCents: 2150_00,
-    slotsTotal: 10,
-    slotsClaimed: 7,
-    status: 'ACTIVE',
-    escrowStatus: 'FUNDED',
-    attributionWindowDays: 7,
-    createdAt: '2026-08-20T10:00:00Z',
-  },
-  {
-    id: 'camp-2',
-    title: 'Glow Serum Before & After Challenge',
-    brandName: 'Lumiere Beauty',
-    niche: 'Beauty',
-    payoutType: 'PER_POST',
-    payoutAmountCents: 250_00,
-    cpmRateCents: 0,
-    budgetCents: 3000_00,
-    budgetSpentCents: 1250_00,
-    slotsTotal: 8,
-    slotsClaimed: 5,
-    status: 'ACTIVE',
-    escrowStatus: 'FUNDED',
-    attributionWindowDays: 7,
-    createdAt: '2026-08-25T14:30:00Z',
-  },
-  {
-    id: 'camp-3',
-    title: 'Minimalist EDC Tech Gear Review Clips',
-    brandName: 'Apex Everyday',
-    niche: 'Tech',
-    payoutType: 'CPM',
-    payoutAmountCents: 0,
-    cpmRateCents: 20_00,
-    budgetCents: 4000_00,
-    budgetSpentCents: 850_00,
-    slotsTotal: 5,
-    slotsClaimed: 4,
-    status: 'ACTIVE',
-    escrowStatus: 'FUNDED',
-    attributionWindowDays: 14,
-    createdAt: '2026-08-28T09:15:00Z',
-  },
-];
-
 export function useCampaigns(initialNiche = 'ALL') {
   const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,9 +53,6 @@ export function useCampaigns(initialNiche = 'ALL') {
       serverCampaigns.forEach((c) => {
         if (!map.has(c.id)) map.set(c.id, c);
       });
-      DEFAULT_CAMPAIGNS.forEach((c) => {
-        if (!map.has(c.id)) map.set(c.id, c);
-      });
 
       let merged = Array.from(map.values());
       if (selectedNiche !== 'ALL') {
@@ -119,7 +62,7 @@ export function useCampaigns(initialNiche = 'ALL') {
       setCampaigns(merged);
     } catch (err: any) {
       setError(err.message || 'Error fetching campaigns');
-      setCampaigns(DEFAULT_CAMPAIGNS);
+      setCampaigns([]);
     } finally {
       setLoading(false);
     }
@@ -132,9 +75,9 @@ export function useCampaigns(initialNiche = 'ALL') {
   const createCampaign = async (payload: Partial<CampaignData>) => {
     const newCamp: CampaignData = {
       id: `camp_${Date.now()}`,
-      title: payload.title || 'Untitled Campaign',
-      brandName: payload.brandName || 'ActiveWear Official',
-      niche: payload.niche || 'Fitness',
+      title: payload.title || 'New Campaign Brief',
+      brandName: payload.brandName || 'Brand Partner',
+      niche: payload.niche || 'General',
       payoutType: payload.payoutType || 'PER_POST',
       payoutAmountCents: payload.payoutAmountCents || 100_00,
       cpmRateCents: payload.cpmRateCents || 0,
@@ -172,7 +115,6 @@ export function useCampaigns(initialNiche = 'ALL') {
   };
 
   const claimSlot = async (campaignId: string) => {
-    // 1. Update local storage
     try {
       const existing = localStorage.getItem('clipbridge_custom_campaigns');
       if (existing) {

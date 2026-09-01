@@ -1,193 +1,135 @@
-import { MetricCard } from "@/components/shared/metric-card";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { EmptyState } from "@/components/shared/empty-state";
-import { DollarSign, Eye, FileCheck, ShoppingBag, TrendingUp } from "lucide-react";
-import Link from "next/link";
+'use client';
 
-// Mock data
-const MOCK_ACTIVE_CLAIMS = [
-  {
-    id: "cl1",
-    campaignTitle: "Summer Collection Launch",
-    brandName: "Acme Corp",
-    status: "SUBMITTED" as const,
-    payoutType: "PER_POST",
-    estEarning: 150_00,
-    deadline: "Sep 15, 2026",
-  },
-  {
-    id: "cl2",
-    campaignTitle: "Fitness App Promo",
-    brandName: "FitTrack",
-    status: "CLAIMED" as const,
-    payoutType: "CPM",
-    estEarning: 200_00,
-    deadline: "Sep 20, 2026",
-  },
-];
-
-const MOCK_RECENT_PAYOUTS = [
-  { id: "p1", campaign: "Brand Awareness Push", amount: 320_00, date: "Aug 28, 2026", status: "COMPLETED" as const },
-  { id: "p2", campaign: "Q2 Product Launch", amount: 180_00, date: "Aug 15, 2026", status: "COMPLETED" as const },
-];
-
-function formatCents(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
-}
+import React from 'react';
+import Link from 'next/link';
+import { ShoppingBag, FileCheck, DollarSign, TrendingUp, ChevronRight, Lock } from 'lucide-react';
+import { MetricCard } from '@/components/shared/metric-card';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { formatCents } from '@/lib/utils/constants';
+import { useCampaigns } from '@/lib/hooks/use-campaigns';
 
 export default function ClipperDashboard() {
+  const { campaigns, loading } = useCampaigns();
+
+  const claimedCampaigns = campaigns.filter((c) => c.slotsClaimed > 0);
+  const totalEstEarnings = claimedCampaigns.reduce((acc, c) => acc + (c.budgetCents / Math.max(1, c.slotsTotal)), 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Dashboard</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Creator Dashboard</h1>
           <p className="text-sm text-text-muted">
-            Your earnings and active campaigns
+            Track your reserved slots, active submissions, and performance payouts.
           </p>
         </div>
-        <Link
-          href="/clipper/marketplace"
-          className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-accent-hover"
-        >
-          <ShoppingBag className="h-4 w-4" />
-          Browse Campaigns
+        <Link href="/clipper/marketplace">
+          <Button size="sm" className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs gap-1.5 shadow-sm">
+            <ShoppingBag className="h-4 w-4" /> Browse Briefs
+          </Button>
         </Link>
       </div>
 
       {/* Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Total Earnings"
-          value="$2,450.00"
-          trend={{ value: "+18.5%", direction: "up" }}
-          subtitle="Lifetime"
+          title="Active Reserved Slots"
+          value={claimedCampaigns.length.toString()}
+          subtitle="48h slot duration"
         />
         <MetricCard
-          title="Pending Payout"
-          value="$350.00"
-          subtitle="Processing by Sep 5"
+          title="Est. Pipeline Earnings"
+          value={formatCents(totalEstEarnings)}
+          subtitle="85% net creator split"
         />
         <MetricCard
-          title="Active Claims"
-          value="2"
-          subtitle="2 submissions due"
+          title="Marketplace Opportunities"
+          value={campaigns.length.toString()}
+          subtitle="Verified brand briefs"
         />
         <MetricCard
-          title="Total Reach"
-          value="892K"
-          trend={{ value: "+12%", direction: "up" }}
-          subtitle="All content"
+          title="Stripe Payout Status"
+          value="CONNECTED"
+          subtitle="Express instant transfers"
         />
       </div>
 
-      {/* Active claims */}
+      {/* Available marketplace campaigns */}
       <div>
-        <h2 className="text-sm font-medium text-text-primary">Active Claims</h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-raised">
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Campaign
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Brand
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Status
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Est. Earning
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Deadline
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_ACTIVE_CLAIMS.map((claim) => (
-                <tr
-                  key={claim.id}
-                  className="border-b border-border-subtle transition-colors last:border-0 hover:bg-surface-raised"
-                >
-                  <td className="px-3 py-2 font-medium text-text-primary">
-                    {claim.campaignTitle}
-                  </td>
-                  <td className="px-3 py-2 text-text-secondary">
-                    {claim.brandName}
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusBadge type="submission" status={claim.status} />
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-text-secondary tabular-nums">
-                    {formatCents(claim.estEarning)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-text-muted">
-                    {claim.deadline}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Recent payouts */}
-      <div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-text-primary">
-            Recent Payouts
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-text-primary">
+            Marketplace Briefs ({campaigns.length})
           </h2>
-          <Link
-            href="/clipper/earnings"
-            className="text-xs font-medium text-brand-accent hover:text-brand-accent-hover"
-          >
-            View all →
+          <Link href="/clipper/marketplace" className="text-xs text-brand-accent hover:underline font-medium">
+            View all briefs &rarr;
           </Link>
         </div>
-        <div className="mt-3 overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-raised">
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Campaign
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Amount
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Date
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_RECENT_PAYOUTS.map((payout) => (
-                <tr
-                  key={payout.id}
-                  className="border-b border-border-subtle transition-colors last:border-0 hover:bg-surface-raised"
-                >
-                  <td className="px-3 py-2 text-text-primary">
-                    {payout.campaign}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono font-medium text-status-success tabular-nums">
-                    +{formatCents(payout.amount)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-text-muted">
-                    {payout.date}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <StatusBadge type="submission" status={payout.status} />
-                  </td>
+
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-text-muted">Loading briefs...</div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-8 text-center text-xs text-text-muted space-y-2">
+              <p>No active briefs currently open.</p>
+              <p className="text-[11px]">When brands launch campaigns, they appear here instantly.</p>
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-2.5 text-left font-medium">Campaign</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Niche</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Payout Model</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Est. Earning</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Slots Left</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {campaigns.map((camp) => {
+                  const slotsLeft = Math.max(0, camp.slotsTotal - camp.slotsClaimed);
+                  return (
+                    <tr
+                      key={camp.id}
+                      className="hover:bg-surface-raised/50 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/clipper/campaigns/${camp.id}`}
+                          className="font-semibold text-text-primary hover:text-brand-accent"
+                        >
+                          {camp.title}
+                        </Link>
+                        <p className="text-[11px] text-text-muted">{camp.brandName}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded bg-surface-raised px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+                          {camp.niche}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        {camp.payoutType}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-status-success tabular-nums">
+                        ~{formatCents(camp.budgetCents / Math.max(1, camp.slotsTotal))}
+                      </td>
+                      <td className="px-4 py-3 text-center font-mono text-xs">
+                        {slotsLeft} / {camp.slotsTotal}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={`/clipper/campaigns/${camp.id}`}>
+                          <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] gap-1">
+                            Inspect <ChevronRight className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

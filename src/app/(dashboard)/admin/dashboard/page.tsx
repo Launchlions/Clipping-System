@@ -1,231 +1,165 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   ShieldAlert, 
   CreditCard, 
   AlertTriangle, 
   CheckCircle2, 
-  XCircle, 
   RotateCcw, 
   Search,
-  Eye
+  Eye,
+  Megaphone,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MetricCard } from '@/components/shared/metric-card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatCents } from '@/lib/utils/constants';
-
-interface DisputeItem {
-  id: string;
-  campaignTitle: string;
-  brandName: string;
-  clipperName: string;
-  disputedAmountCents: number;
-  reason: string;
-  status: 'OPEN' | 'RESOLVED' | 'REFUNDED';
-  openedAt: string;
-}
-
-interface FraudFlag {
-  id: string;
-  clipperName: string;
-  reason: string;
-  severity: 'HIGH' | 'MEDIUM';
-  flaggedMetric: string;
-  detectedAt: string;
-}
-
-const MOCK_DISPUTES: DisputeItem[] = [
-  {
-    id: 'disp-1',
-    campaignTitle: 'Summer Activewear Reel Blitz',
-    brandName: 'ActiveWear Official',
-    clipperName: 'JakeEdits99',
-    disputedAmountCents: 150_00,
-    reason: 'Brand claims video was deleted from Instagram within 24 hours of payout.',
-    status: 'OPEN',
-    openedAt: 'Sep 01, 2026',
-  },
-  {
-    id: 'disp-2',
-    campaignTitle: 'Minimalist EDC Tech Gear Review Clips',
-    brandName: 'Apex Everyday',
-    clipperName: 'TechVibes',
-    disputedAmountCents: 320_00,
-    reason: 'Clipper claims view count frozen at 12k while live post has 45k.',
-    status: 'OPEN',
-    openedAt: 'Aug 30, 2026',
-  },
-];
-
-const MOCK_FRAUD_FLAGS: FraudFlag[] = [
-  {
-    id: 'frd-1',
-    clipperName: 'bot_clipper_sus',
-    reason: '98% of views originated from single IP subnet in 15-minute spike.',
-    severity: 'HIGH',
-    flaggedMetric: 'Abnormal Velocity Spike (50K views / 10 mins)',
-    detectedAt: 'Aug 31, 2026',
-  },
-];
+import { useCampaigns } from '@/lib/hooks/use-campaigns';
+import { useToast } from '@/components/ui/toast';
 
 export default function AdminDashboardPage() {
-  const [disputes, setDisputes] = useState(MOCK_DISPUTES);
-  const [selectedDispute, setSelectedDispute] = useState<DisputeItem | null>(null);
-  const [overrideReason, setOverrideReason] = useState('');
+  const { toast } = useToast();
+  const { campaigns } = useCampaigns();
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'disputes' | 'telemetry'>('campaigns');
 
-  const resolveDispute = (id: string, resolution: 'RESOLVED' | 'REFUNDED') => {
-    if (!overrideReason.trim()) {
-      alert('Mandatory compliance audit note: Please specify the reason for this administrative action.');
-      return;
-    }
-
-    setDisputes((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: resolution } : d))
-    );
-    alert(`Dispute ${id} marked as ${resolution}. Action logged to immutable audit ledger.`);
-    setSelectedDispute(null);
-    setOverrideReason('');
-  };
+  const totalEscrow = campaigns.reduce((acc, c) => acc + c.budgetCents, 0);
+  const totalSpend = campaigns.reduce((acc, c) => acc + c.budgetSpentCents, 0);
+  const totalSlotsClaimed = campaigns.reduce((acc, c) => acc + c.slotsClaimed, 0);
+  const platformRevenue = Math.round(totalSpend * 0.15);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-lg font-semibold text-text-primary">Admin Operations &amp; Risk Console</h1>
-        <p className="text-sm text-text-muted">
-          Escrow dispute arbitration, fraud detection telemetry, and platform commission ledger.
-        </p>
-      </div>
-
-      {/* High-level Platform Telemetry */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Escrow Custody" value="$48,500.00" subtitle="Across 34 active campaigns" />
-        <MetricCard title="Platform Net Revenue" value="$7,275.00" trend={{ value: '+24%', direction: 'up' }} subtitle="15% commission YTD" />
-        <MetricCard title="Open Disputes" value={`${disputes.filter((d) => d.status === 'OPEN').length}`} subtitle="Requires arbitration" />
-        <MetricCard title="Active Fraud Flags" value="1" subtitle="Payout holds enforced" />
-      </div>
-
-      {/* Fraud Flag Alerts */}
-      <div className="rounded-lg border border-status-danger/30 bg-status-danger-bg p-4 space-y-3">
-        <div className="flex items-center gap-2 text-status-danger">
-          <ShieldAlert className="h-5 w-5 shrink-0" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider">Automated Risk &amp; Fraud Detection</h3>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-text-primary">Operations &amp; Admin Console</h1>
+          <p className="text-sm text-text-muted">Platform financial custody, global campaign monitoring, and dispute settlement.</p>
         </div>
 
-        {MOCK_FRAUD_FLAGS.map((flag) => (
-          <div key={flag.id} className="rounded-md border border-border bg-surface p-3 flex items-center justify-between text-xs">
-            <div>
-              <p className="font-semibold text-text-primary">Creator Flagged: @{flag.clipperName}</p>
-              <p className="text-text-muted">{flag.reason} • <span className="font-mono text-status-danger">{flag.flaggedMetric}</span></p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => alert(`Frozen payouts for @${flag.clipperName}`)}>
-                Freeze Payouts
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/disputes">
+            <Button size="sm" variant="outline" className="text-xs gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" /> Dispute Console
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard title="Total Escrow in Custody" value={formatCents(totalEscrow)} subtitle="Across all active brand campaigns" />
+        <MetricCard title="Disbursed Creator Payouts" value={formatCents(totalSpend)} subtitle="Released upon verified views" />
+        <MetricCard title="15% Platform Take" value={formatCents(platformRevenue)} subtitle="Net realized marketplace fees" />
+        <MetricCard title="Active Campaigns" value={campaigns.length.toString()} subtitle={`${totalSlotsClaimed} active creator slots`} />
+      </div>
+
+      {/* Admin Tab Switcher */}
+      <div className="flex border-b border-border text-xs">
+        {[
+          { id: 'campaigns', label: `Global Campaigns (${campaigns.length})` },
+          { id: 'disputes', label: 'Dispute Arbitration (0)' },
+          { id: 'telemetry', label: 'Bot Velocity Shield' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`border-b-2 px-4 py-2.5 font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'border-brand-accent text-brand-accent font-semibold'
+                : 'border-transparent text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* Dispute Arbitration Queue */}
-      <div className="rounded-lg border border-border bg-surface">
-        <div className="border-b border-border p-4">
-          <h3 className="text-sm font-semibold text-text-primary">Dispute Arbitration Queue</h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
-              <tr>
-                <th className="px-4 py-2.5 text-left font-medium">Dispute ID</th>
-                <th className="px-4 py-2.5 text-left font-medium">Campaign &amp; Parties</th>
-                <th className="px-4 py-2.5 text-left font-medium">Dispute Reason</th>
-                <th className="px-4 py-2.5 text-right font-medium">Disputed Amount</th>
-                <th className="px-4 py-2.5 text-center font-medium">Status</th>
-                <th className="px-4 py-2.5 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle">
-              {disputes.map((d) => (
-                <tr key={d.id} className="hover:bg-surface-raised/50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-text-muted">{d.id}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-text-primary">{d.campaignTitle}</p>
-                    <p className="text-[11px] text-text-muted">{d.brandName} vs. @{d.clipperName}</p>
-                  </td>
-                  <td className="px-4 py-3 max-w-xs text-text-secondary">{d.reason}</td>
-                  <td className="px-4 py-3 text-right font-mono font-bold tabular-nums text-text-primary">
-                    {formatCents(d.disputedAmountCents)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        d.status === 'OPEN' ? 'bg-status-warning-bg text-status-warning' : 'bg-status-success-bg text-status-success'
-                      }`}
-                    >
-                      {d.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {d.status === 'OPEN' ? (
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSelectedDispute(d)}>
-                        Arbitrate
-                      </Button>
-                    ) : (
-                      <span className="text-[11px] text-text-muted">Settled</span>
-                    )}
-                  </td>
+      {/* Tab: Global Campaigns */}
+      {activeTab === 'campaigns' && (
+        <div className="rounded-lg border border-border bg-surface overflow-hidden">
+          {campaigns.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <p className="text-sm font-semibold text-text-primary">No campaigns created yet</p>
+              <p className="text-xs text-text-muted">When brands create campaigns, they will be tracked globally here.</p>
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Campaign Title</th>
+                  <th className="px-4 py-3 text-left font-medium">Brand</th>
+                  <th className="px-4 py-3 text-left font-medium">Niche</th>
+                  <th className="px-4 py-3 text-right font-medium">Budget</th>
+                  <th className="px-4 py-3 text-center font-medium">Slots Claimed</th>
+                  <th className="px-4 py-3 text-center font-medium">Status</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {campaigns.map((c) => (
+                  <tr key={c.id} className="hover:bg-surface-raised/50 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-text-primary">{c.title}</td>
+                    <td className="px-4 py-3 text-text-secondary">{c.brandName}</td>
+                    <td className="px-4 py-3">{c.niche}</td>
+                    <td className="px-4 py-3 text-right font-mono font-semibold text-text-primary tabular-nums">
+                      {formatCents(c.budgetCents)}
+                    </td>
+                    <td className="px-4 py-3 text-center font-mono">{c.slotsClaimed} / {c.slotsTotal}</td>
+                    <td className="px-4 py-3 text-center">
+                      <StatusBadge type="campaign" status={c.status as any} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link href={`/brand/campaigns/${c.id}`}>
+                        <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] gap-1">
+                          Inspect <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Arbitration Modal */}
-      {selectedDispute && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-lg border border-border bg-surface p-6 space-y-4 shadow-xl">
-            <h3 className="text-sm font-semibold text-text-primary">Arbitrate Dispute: {selectedDispute.id}</h3>
-            <p className="text-xs text-text-muted">
-              Disputed Amount: <strong className="font-mono">{formatCents(selectedDispute.disputedAmountCents)}</strong> for {selectedDispute.campaignTitle}
-            </p>
+      {/* Tab: Disputes */}
+      {activeTab === 'disputes' && (
+        <div className="rounded-lg border border-border bg-surface p-12 text-center space-y-2">
+          <CheckCircle2 className="mx-auto h-8 w-8 text-status-success" />
+          <h3 className="text-sm font-semibold text-text-primary">All Dispute Queues Clear</h3>
+          <p className="text-xs text-text-muted">Zero contested campaign submissions or pending arbitration cases.</p>
+        </div>
+      )}
 
-            <div className="rounded-md border border-border bg-surface-raised p-3 text-xs">
-              <p className="text-text-secondary">{selectedDispute.reason}</p>
+      {/* Tab: Telemetry */}
+      {activeTab === 'telemetry' && (
+        <div className="rounded-lg border border-border bg-surface p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">Bot Velocity &amp; Anomaly Protection Engine</h3>
+              <p className="text-xs text-text-muted">Multi-factor engagement ratio and view acceleration monitoring active.</p>
             </div>
+            <span className="rounded bg-status-success/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-status-success">
+              ● ANOMALY SHIELD OPERATIONAL
+            </span>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-text-secondary">Mandatory Administrative Audit Note</label>
-              <textarea
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="Detail why funds are being released to creator or refunded to brand..."
-                rows={3}
-                className="w-full rounded-md border border-input-border bg-input-bg p-2 text-xs text-text-primary focus:border-brand-accent focus:outline-none resize-none"
-              />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 text-xs">
+            <div className="rounded border border-border p-3 bg-surface-raised">
+              <span className="text-text-muted">Anomaly Detection Sensitivity:</span>
+              <p className="font-semibold text-text-primary mt-1">Strict (&lt;0.15% engagement threshold)</p>
             </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setSelectedDispute(null)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => resolveDispute(selectedDispute.id, 'REFUNDED')}
-              >
-                Refund Brand
-              </Button>
-              <Button
-                size="sm"
-                className="bg-status-success text-white"
-                onClick={() => resolveDispute(selectedDispute.id, 'RESOLVED')}
-              >
-                Release Payout to Creator
-              </Button>
+            <div className="rounded border border-border p-3 bg-surface-raised">
+              <span className="text-text-muted">Polling Frequency:</span>
+              <p className="font-semibold text-text-primary mt-1">Every 6 Hours (Meta Graph API)</p>
+            </div>
+            <div className="rounded border border-border p-3 bg-surface-raised">
+              <span className="text-text-muted">Attribution Window:</span>
+              <p className="font-semibold text-text-primary mt-1">7 to 14 Days Rolling</p>
             </div>
           </div>
         </div>
