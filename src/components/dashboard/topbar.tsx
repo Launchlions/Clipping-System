@@ -5,6 +5,8 @@ import { Bell, LogOut, Settings, User } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 import { cn } from "@/lib/utils/cn";
 
+import { NotificationBell } from "./notification-bell";
+
 export function Topbar() {
   const { data: session } = useSession();
 
@@ -13,15 +15,7 @@ export function Topbar() {
       <Breadcrumbs />
 
       <div className="flex items-center gap-2">
-        {/* Notification bell */}
-        <button
-          className="relative rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4 w-4" />
-          {/* Notification dot */}
-          <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-brand-accent" />
-        </button>
+        <NotificationBell />
 
         {/* User menu */}
         <div className="relative group">
