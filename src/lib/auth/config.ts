@@ -1,6 +1,10 @@
 import { NextAuthOptions, getServerSession as _getServerSession } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 
+if (!process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://clipbridge.vercel.app';
+}
+
 declare module "next-auth" {
   interface Session {
     user: {

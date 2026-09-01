@@ -48,6 +48,9 @@ const nextConfig = {
       },
     ];
   },
+  env: {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'https://clipbridge.vercel.app',
+  },
 };
 
 export default nextConfig;

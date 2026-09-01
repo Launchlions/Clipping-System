@@ -15,13 +15,15 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   );
 }
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider>
+    <SessionProvider basePath="/api/auth">
       <DashboardInner>{children}</DashboardInner>
     </SessionProvider>
   );
