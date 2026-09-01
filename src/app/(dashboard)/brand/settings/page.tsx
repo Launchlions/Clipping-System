@@ -16,7 +16,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 
+import { useToast } from '@/components/ui/toast';
+
 export default function BrandSettingsPage() {
+  const { toast } = useToast();
   const [copiedKey, setCopiedKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'billing' | 'team' | 'api' | 'privacy'>('profile');
 
@@ -30,14 +33,30 @@ export default function BrandSettingsPage() {
   const copyKey = () => {
     navigator.clipboard.writeText(apiKey);
     setCopiedKey(true);
+    toast({
+      type: 'info',
+      title: 'API Key Copied',
+      description: 'API key copied to clipboard.',
+    });
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
   const regenerateKey = () => {
-    if (confirm('Are you sure you want to regenerate your API key? Any active integrations will need to be updated.')) {
-      setApiKey(`cb_live_${Math.random().toString(36).substring(2, 12)}`);
-      alert('API Key regenerated successfully.');
-    }
+    const newKey = `cb_live_${Math.random().toString(36).substring(2, 12)}`;
+    setApiKey(newKey);
+    toast({
+      type: 'warning',
+      title: 'API Key Regenerated',
+      description: 'New production API key is now active. Update your server environment variables.',
+    });
+  };
+
+  const handleSaveProfile = () => {
+    toast({
+      type: 'success',
+      title: 'Company Profile Updated',
+      description: 'Changes saved successfully to your organization account.',
+    });
   };
 
   return (
@@ -126,7 +145,7 @@ export default function BrandSettingsPage() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button size="sm" className="bg-brand-accent text-white text-xs" onClick={() => alert('Company profile updated.')}>
+              <Button size="sm" className="bg-brand-accent text-white text-xs" onClick={handleSaveProfile}>
                 Save Changes
               </Button>
             </div>

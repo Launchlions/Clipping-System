@@ -76,7 +76,12 @@ const MOCK_LEDGER: EscrowTransaction[] = [
   },
 ];
 
+import { useToast } from '@/components/ui/toast';
+import { useEscrow } from '@/lib/hooks/use-escrow';
+
 export default function BrandEscrowPage() {
+  const { toast } = useToast();
+  const { depositEscrow } = useEscrow();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState(2500);
 
@@ -225,9 +230,23 @@ export default function BrandEscrowPage() {
               <Button
                 size="sm"
                 className="bg-brand-accent text-white"
-                onClick={() => {
-                  alert(`Deposited $${depositAmount}.00 to Escrow.`);
-                  setShowDepositModal(false);
+                onClick={async () => {
+                  try {
+                    await depositEscrow('camp-1', depositAmount * 100);
+                    toast({
+                      type: 'success',
+                      title: 'Escrow Deposit Succeeded',
+                      description: `$${depositAmount.toLocaleString()}.00 added to Stripe custody balance.`,
+                    });
+                  } catch (err: any) {
+                    toast({
+                      type: 'error',
+                      title: 'Deposit Failed',
+                      description: err.message || 'Payment method was declined.',
+                    });
+                  } finally {
+                    setShowDepositModal(false);
+                  }
                 }}
               >
                 Confirm Deposit (${depositAmount}.00)
