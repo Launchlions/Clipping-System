@@ -3,7 +3,26 @@ import { getServerSession } from '@/lib/auth/config';
 
 export const dynamic = 'force-dynamic';
 
-const MOCK_CAMPAIGNS = [
+export interface ServerCampaign {
+  id: string;
+  title: string;
+  brandName: string;
+  niche: string;
+  payoutType: string;
+  payoutAmountCents: number;
+  cpmRateCents: number;
+  budgetCents: number;
+  budgetSpentCents: number;
+  slotsTotal: number;
+  slotsClaimed: number;
+  status: string;
+  escrowStatus: string;
+  attributionWindowDays: number;
+  createdAt: string;
+}
+
+// Global persistent in-memory store across Next.js API requests
+const globalCampaigns = (globalThis as any).__clipbridge_campaigns || [
   {
     id: 'camp-1',
     title: 'Summer Activewear Reel Blitz',
@@ -57,12 +76,14 @@ const MOCK_CAMPAIGNS = [
   },
 ];
 
+(globalThis as any).__clipbridge_campaigns = globalCampaigns;
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const niche = searchParams.get('niche');
   const status = searchParams.get('status');
 
-  let results = [...MOCK_CAMPAIGNS];
+  let results: ServerCampaign[] = [...(globalThis as any).__clipbridge_campaigns];
 
   if (niche && niche !== 'ALL') {
     results = results.filter((c) => c.niche.toLowerCase() === niche.toLowerCase());
@@ -91,29 +112,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newCampaign = {
+    const newCampaign: ServerCampaign = {
       id: `camp_${Date.now()}`,
       title: body.title,
-      brandName: session?.user?.name || 'Acme Brand',
+      brandName: session?.user?.name || 'ActiveWear Official',
       niche: body.niche || 'Fitness',
       payoutType: body.payoutType || 'PER_POST',
       payoutAmountCents: body.payoutAmountCents || 100_00,
       cpmRateCents: body.cpmRateCents || 0,
-      budgetCents: body.budgetCents,
+      budgetCents: Number(body.budgetCents),
       budgetSpentCents: 0,
-      slotsTotal: body.slotsTotal || 10,
+      slotsTotal: Number(body.slotsTotal) || 10,
       slotsClaimed: 0,
       status: 'ACTIVE',
       escrowStatus: 'FUNDED',
-      attributionWindowDays: body.attributionWindowDays || 7,
+      attributionWindowDays: Number(body.attributionWindowDays) || 7,
       createdAt: new Date().toISOString(),
     };
+
+    // Prepend to persistent memory store
+    (globalThis as any).__clipbridge_campaigns.unshift(newCampaign);
 
     return NextResponse.json(
       { message: 'Campaign created and escrow authorized successfully', campaign: newCampaign },
       { status: 201 }
     );
-  } catch {
-    return NextResponse.json({ error: 'Failed to create campaign' }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Failed to create campaign' }, { status: 500 });
   }
 }

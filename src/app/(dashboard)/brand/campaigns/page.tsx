@@ -5,10 +5,7 @@ import Link from 'next/link';
 import { 
   Plus, 
   Search, 
-  Filter, 
-  Megaphone, 
   ChevronRight, 
-  MoreHorizontal, 
   Pause, 
   Play, 
   Eye, 
@@ -21,94 +18,11 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { MetricCard } from '@/components/shared/metric-card';
 import { formatCents } from '@/lib/utils/constants';
 import { useToast } from '@/components/ui/toast';
-
-interface CampaignItem {
-  id: string;
-  title: string;
-  niche: string;
-  payoutType: 'PER_POST' | 'CPM' | 'HYBRID';
-  payoutDesc: string;
-  status: 'ACTIVE' | 'PAUSED' | 'DRAFT' | 'COMPLETED';
-  budgetCents: number;
-  budgetSpentCents: number;
-  escrowBalanceCents: number;
-  submissionsCount: number;
-  verifiedViews: number;
-  slotsClaimed: number;
-  slotsTotal: number;
-  createdAt: string;
-}
-
-const INITIAL_CAMPAIGNS: CampaignItem[] = [
-  {
-    id: 'camp-1',
-    title: 'Summer Activewear Reel Blitz',
-    niche: 'Fitness',
-    payoutType: 'HYBRID',
-    payoutDesc: '$100 base + $15/1K views',
-    status: 'ACTIVE',
-    budgetCents: 5000_00,
-    budgetSpentCents: 2150_00,
-    escrowBalanceCents: 2850_00,
-    submissionsCount: 14,
-    verifiedViews: 148500,
-    slotsClaimed: 7,
-    slotsTotal: 10,
-    createdAt: 'Aug 20, 2026',
-  },
-  {
-    id: 'camp-2',
-    title: 'Glow Serum Before & After Challenge',
-    niche: 'Beauty',
-    payoutType: 'PER_POST',
-    payoutDesc: '$250 flat per approved Reel',
-    status: 'ACTIVE',
-    budgetCents: 3000_00,
-    budgetSpentCents: 1250_00,
-    escrowBalanceCents: 1750_00,
-    submissionsCount: 8,
-    verifiedViews: 86400,
-    slotsClaimed: 5,
-    slotsTotal: 8,
-    createdAt: 'Aug 25, 2026',
-  },
-  {
-    id: 'camp-3',
-    title: 'Minimalist EDC Tech Gear Review Clips',
-    niche: 'Tech',
-    payoutType: 'CPM',
-    payoutDesc: '$20 CPM (up to $1,000 cap)',
-    status: 'PAUSED',
-    budgetCents: 4000_00,
-    budgetSpentCents: 850_00,
-    escrowBalanceCents: 3150_00,
-    submissionsCount: 6,
-    verifiedViews: 42500,
-    slotsClaimed: 4,
-    slotsTotal: 5,
-    createdAt: 'Aug 28, 2026',
-  },
-  {
-    id: 'camp-4',
-    title: 'Fall Winter Thermal Layering Series',
-    niche: 'Fashion',
-    payoutType: 'HYBRID',
-    payoutDesc: '$120 base + $10/1K views',
-    status: 'DRAFT',
-    budgetCents: 6000_00,
-    budgetSpentCents: 0,
-    escrowBalanceCents: 6000_00,
-    submissionsCount: 0,
-    verifiedViews: 0,
-    slotsClaimed: 0,
-    slotsTotal: 12,
-    createdAt: 'Sep 01, 2026',
-  },
-];
+import { useCampaigns } from '@/lib/hooks/use-campaigns';
 
 export default function BrandCampaignsPage() {
   const { toast } = useToast();
-  const [campaigns, setCampaigns] = useState<CampaignItem[]>(INITIAL_CAMPAIGNS);
+  const { campaigns, loading, toggleStatus } = useCampaigns();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [nicheFilter, setNicheFilter] = useState('ALL');
@@ -120,23 +34,18 @@ export default function BrandCampaignsPage() {
     return matchesSearch && matchesStatus && matchesNiche;
   });
 
-  const toggleStatus = (id: string) => {
-    setCampaigns((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const newStatus = c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-        toast({
-          type: 'info',
-          title: `Campaign ${newStatus === 'ACTIVE' ? 'Resumed' : 'Paused'}`,
-          description: `${c.title} is now ${newStatus.toLowerCase()}.`,
-        });
-        return { ...c, status: newStatus };
-      })
-    );
+  const handleToggle = (id: string, currentStatus: string, title: string) => {
+    toggleStatus(id);
+    const nextStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    toast({
+      type: 'info',
+      title: `Campaign ${nextStatus === 'ACTIVE' ? 'Resumed' : 'Paused'}`,
+      description: `${title} is now ${nextStatus.toLowerCase()}.`,
+    });
   };
 
-  const totalEscrow = campaigns.reduce((acc, c) => acc + c.escrowBalanceCents, 0);
-  const totalViews = campaigns.reduce((acc, c) => acc + c.verifiedViews, 0);
+  const totalBudget = campaigns.reduce((acc, c) => acc + c.budgetCents, 0);
+  const totalSpent = campaigns.reduce((acc, c) => acc + c.budgetSpentCents, 0);
   const activeCount = campaigns.filter((c) => c.status === 'ACTIVE').length;
 
   return (
@@ -162,9 +71,9 @@ export default function BrandCampaignsPage() {
       {/* Hero Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Active Campaigns" value={activeCount.toString()} subtitle="Running creator slots" />
-        <MetricCard title="Total Escrow Held" value={formatCents(totalEscrow)} subtitle="Secured via Stripe" />
-        <MetricCard title="Total Verified Views" value={totalViews.toLocaleString()} subtitle="Across active Reels" />
-        <MetricCard title="Avg. CPM Efficiency" value="$14.48" subtitle="Industry benchmark: $22.00" />
+        <MetricCard title="Total Escrow Allocated" value={formatCents(totalBudget)} subtitle="Secured in Stripe custody" />
+        <MetricCard title="Total Spent" value={formatCents(totalSpent)} subtitle="Disbursed upon view milestones" />
+        <MetricCard title="Avg. CPM Efficiency" value="$12.50" subtitle="Benchmark vs Paid Ads: $26.50" />
       </div>
 
       {/* Filter Bar */}
@@ -203,77 +112,91 @@ export default function BrandCampaignsPage() {
             <option value="Beauty">Beauty</option>
             <option value="Tech">Tech</option>
             <option value="Fashion">Fashion</option>
+            <option value="Food">Food</option>
           </select>
         </div>
       </div>
 
       {/* Campaigns Table */}
       <div className="rounded-lg border border-border bg-surface overflow-hidden">
-        <table className="w-full text-xs">
-          <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium">Campaign Title</th>
-              <th className="px-4 py-3 text-left font-medium">Niche &amp; Terms</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Budget &amp; Spend</th>
-              <th className="px-4 py-3 text-center font-medium">Slots</th>
-              <th className="px-4 py-3 text-right font-medium">Verified Views</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border-subtle">
-            {filtered.map((camp) => (
-              <tr key={camp.id} className="hover:bg-surface-raised/50 transition-colors">
-                <td className="px-4 py-3">
-                  <Link href={`/brand/campaigns/${camp.id}`} className="font-semibold text-text-primary hover:text-brand-accent transition-colors">
-                    {camp.title}
-                  </Link>
-                  <p className="text-[11px] text-text-muted mt-0.5">Created {camp.createdAt}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="font-medium text-text-secondary">{camp.niche}</span>
-                  <p className="text-[11px] text-text-muted">{camp.payoutDesc}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <StatusBadge type="campaign" status={camp.status} />
-                </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums">
-                  <p className="font-semibold text-text-primary">{formatCents(camp.budgetCents)}</p>
-                  <p className="text-[11px] text-text-muted">Spent: {formatCents(camp.budgetSpentCents)}</p>
-                </td>
-                <td className="px-4 py-3 text-center font-mono">
-                  <span className="font-semibold text-text-secondary">
-                    {camp.slotsClaimed} / {camp.slotsTotal}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right font-mono font-bold text-text-primary tabular-nums">
-                  {camp.verifiedViews.toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {camp.status === 'ACTIVE' || camp.status === 'PAUSED' ? (
+        {loading ? (
+          <div className="p-8 text-center text-xs text-text-muted">Loading active campaigns...</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <p className="text-sm font-semibold text-text-primary">No campaigns match your search filter</p>
+            <Link href="/brand/campaigns/new">
+              <Button size="sm" className="bg-brand-accent text-white text-xs">Create New Campaign</Button>
+            </Link>
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">Campaign Title</th>
+                <th className="px-4 py-3 text-left font-medium">Niche &amp; Model</th>
+                <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-right font-medium">Budget &amp; Spend</th>
+                <th className="px-4 py-3 text-center font-medium">Slots Claimed</th>
+                <th className="px-4 py-3 text-right font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle">
+              {filtered.map((camp) => (
+                <tr key={camp.id} className="hover:bg-surface-raised/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <Link href={`/brand/campaigns/${camp.id}`} className="font-semibold text-text-primary hover:text-brand-accent transition-colors">
+                      {camp.title}
+                    </Link>
+                    <p className="text-[11px] text-text-muted mt-0.5">
+                      {camp.brandName} &bull; ID: {camp.id}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-medium text-text-secondary">{camp.niche}</span>
+                    <p className="text-[11px] text-text-muted">
+                      {camp.payoutType === 'HYBRID'
+                        ? `$${(camp.payoutAmountCents / 100).toFixed(0)} base + $${(camp.cpmRateCents / 100).toFixed(0)} CPM`
+                        : camp.payoutType === 'CPM'
+                        ? `$${(camp.cpmRateCents / 100).toFixed(0)} CPM`
+                        : `$${(camp.payoutAmountCents / 100).toFixed(0)} flat`}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge type="campaign" status={camp.status as any} />
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    <p className="font-semibold text-text-primary">{formatCents(camp.budgetCents)}</p>
+                    <p className="text-[11px] text-text-muted">Spent: {formatCents(camp.budgetSpentCents)}</p>
+                  </td>
+                  <td className="px-4 py-3 text-center font-mono">
+                    <span className="font-semibold text-text-secondary">
+                      {camp.slotsClaimed} / {camp.slotsTotal}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleStatus(camp.id)}
+                        onClick={() => handleToggle(camp.id, camp.status, camp.title)}
                         className="h-7 px-2 text-[11px] gap-1 text-text-muted hover:text-text-primary"
                       >
                         {camp.status === 'ACTIVE' ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                         {camp.status === 'ACTIVE' ? 'Pause' : 'Resume'}
                       </Button>
-                    ) : null}
 
-                    <Link href={`/brand/campaigns/${camp.id}`}>
-                      <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] gap-1">
-                        Inspect <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      <Link href={`/brand/campaigns/${camp.id}`}>
+                        <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] gap-1">
+                          Inspect <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

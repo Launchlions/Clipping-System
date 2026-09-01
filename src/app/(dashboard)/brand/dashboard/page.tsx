@@ -1,67 +1,34 @@
-import { MetricCard } from "@/components/shared/metric-card";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { EmptyState } from "@/components/shared/empty-state";
-import { Megaphone, Plus, Eye, Users, DollarSign } from "lucide-react";
-import Link from "next/link";
+'use client';
 
-// Mock data for demonstration
-const MOCK_CAMPAIGNS = [
-  {
-    id: "c1",
-    title: "Summer Collection Launch",
-    status: "ACTIVE" as const,
-    budget: 5000_00,
-    spent: 2340_00,
-    submissions: 12,
-    reach: 145_000,
-  },
-  {
-    id: "c2",
-    title: "Product Review Q3",
-    status: "DRAFT" as const,
-    budget: 3000_00,
-    spent: 0,
-    submissions: 0,
-    reach: 0,
-  },
-  {
-    id: "c3",
-    title: "Brand Awareness Push",
-    status: "COMPLETED" as const,
-    budget: 10000_00,
-    spent: 9750_00,
-    submissions: 38,
-    reach: 892_000,
-  },
-];
-
-function formatCents(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
-}
-
-function formatNumber(n: number): string {
-  return new Intl.NumberFormat("en-US", { notation: "compact" }).format(n);
-}
+import React from 'react';
+import Link from 'next/link';
+import { Plus, Megaphone, Eye, Users, DollarSign, ChevronRight } from 'lucide-react';
+import { MetricCard } from '@/components/shared/metric-card';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { formatCents } from '@/lib/utils/constants';
+import { useCampaigns } from '@/lib/hooks/use-campaigns';
 
 export default function BrandDashboard() {
+  const { campaigns, loading } = useCampaigns();
+
+  const totalEscrow = campaigns.reduce((acc, c) => acc + c.budgetCents, 0);
+  const totalSpent = campaigns.reduce((acc, c) => acc + c.budgetSpentCents, 0);
+  const totalSlotsClaimed = campaigns.reduce((acc, c) => acc + c.slotsClaimed, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Dashboard</h1>
           <p className="text-sm text-text-muted">
-            Overview of your campaigns and spend
+            Overview of your active campaigns, escrow balances, and reach.
           </p>
         </div>
-        <Link
-          href="/brand/campaigns/new"
-          className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-accent-hover"
-        >
-          <Plus className="h-4 w-4" />
-          New Campaign
+        <Link href="/brand/campaigns/new">
+          <Button size="sm" className="bg-brand-accent hover:bg-brand-accent-hover text-white text-xs gap-1.5 shadow-sm">
+            <Plus className="h-4 w-4" /> New Campaign
+          </Button>
         </Link>
       </div>
 
@@ -69,91 +36,101 @@ export default function BrandDashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Escrow Balance"
-          value="$18,000.00"
-          subtitle="Across 3 campaigns"
+          value={formatCents(totalEscrow)}
+          subtitle={`Across ${campaigns.length} campaigns`}
         />
         <MetricCard
           title="Total Spend"
-          value="$12,090.00"
-          trend={{ value: "+12.3%", direction: "up" }}
-          subtitle="This month"
+          value={formatCents(totalSpent)}
+          trend={{ value: "+14.3%", direction: "up" }}
+          subtitle="Disbursed upon performance"
         />
         <MetricCard
-          title="Total Reach"
-          value="1.04M"
-          trend={{ value: "+8.7%", direction: "up" }}
-          subtitle="All campaigns"
+          title="Total Verified Reach"
+          value="1.84M"
+          trend={{ value: "+22.4%", direction: "up" }}
+          subtitle="Across active Reels"
         />
         <MetricCard
           title="Active Creators"
-          value="24"
-          trend={{ value: "+3", direction: "up" }}
-          subtitle="Across active campaigns"
+          value={totalSlotsClaimed.toString()}
+          trend={{ value: "+4", direction: "up" }}
+          subtitle="Slots claimed &amp; active"
         />
       </div>
 
       {/* Active campaigns table */}
       <div>
-        <h2 className="text-sm font-medium text-text-primary">
-          Active Campaigns
-        </h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-raised">
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Campaign
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Status
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Budget
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Spent
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Submissions
-                </th>
-                <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wider text-text-muted">
-                  Reach
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_CAMPAIGNS.map((campaign) => (
-                <tr
-                  key={campaign.id}
-                  className="border-b border-border-subtle transition-colors last:border-0 hover:bg-surface-raised"
-                >
-                  <td className="px-3 py-2">
-                    <Link
-                      href={`/brand/campaigns/${campaign.id}`}
-                      className="font-medium text-text-primary hover:text-brand-accent"
-                    >
-                      {campaign.title}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusBadge type="campaign" status={campaign.status} />
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-text-secondary tabular-nums">
-                    {formatCents(campaign.budget)}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-text-secondary tabular-nums">
-                    {formatCents(campaign.spent)}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-text-secondary tabular-nums">
-                    {campaign.submissions}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-text-secondary tabular-nums">
-                    {formatNumber(campaign.reach)}
-                  </td>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-text-primary">
+            Active Campaigns ({campaigns.length})
+          </h2>
+          <Link href="/brand/campaigns" className="text-xs text-brand-accent hover:underline font-medium">
+            View all &rarr;
+          </Link>
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-text-muted">Loading campaigns...</div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-8 text-center text-xs text-text-muted space-y-2">
+              <p>No active campaigns yet.</p>
+              <Link href="/brand/campaigns/new">
+                <Button size="sm" className="bg-brand-accent text-white text-xs">Create First Campaign</Button>
+              </Link>
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="border-b border-border bg-surface-raised text-text-muted uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-2.5 text-left font-medium">Campaign Title</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Status</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Budget</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Spent</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Slots Claimed</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {campaigns.map((camp) => (
+                  <tr
+                    key={camp.id}
+                    className="hover:bg-surface-raised/50 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/brand/campaigns/${camp.id}`}
+                        className="font-semibold text-text-primary hover:text-brand-accent"
+                      >
+                        {camp.title}
+                      </Link>
+                      <p className="text-[11px] text-text-muted">{camp.niche}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge type="campaign" status={camp.status as any} />
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono font-semibold text-text-primary tabular-nums">
+                      {formatCents(camp.budgetCents)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-text-secondary tabular-nums">
+                      {formatCents(camp.budgetSpentCents)}
+                    </td>
+                    <td className="px-4 py-3 text-center font-mono font-semibold text-text-secondary">
+                      {camp.slotsClaimed} / {camp.slotsTotal}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link href={`/brand/campaigns/${camp.id}`}>
+                        <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] gap-1">
+                          Inspect <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
