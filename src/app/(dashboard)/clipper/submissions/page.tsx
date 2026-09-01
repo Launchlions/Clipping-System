@@ -17,7 +17,12 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { VerificationTimeline } from '@/components/tracking/verification-timeline';
 import { formatCents } from '@/lib/utils/constants';
 
+import { useToast } from '@/components/ui/toast';
+import { useSubmissions } from '@/lib/hooks/use-submissions';
+
 export default function ClipperSubmissionsPage() {
+  const { toast } = useToast();
+  const { submitLiveLink } = useSubmissions();
   const [showSubmitLiveUrl, setShowSubmitLiveUrl] = useState(false);
   const [liveReelUrl, setLiveReelUrl] = useState('');
   const [submittingUrl, setSubmittingUrl] = useState(false);
@@ -61,15 +66,21 @@ export default function ClipperSubmissionsPage() {
     },
   ]);
 
-  const handleLinkSubmit = (e: React.FormEvent) => {
+  const handleLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!liveReelUrl.includes('instagram.com')) {
-      alert('Please enter a valid Instagram Reel URL');
+      toast({
+        type: 'error',
+        title: 'Invalid URL',
+        description: 'Please enter a valid Instagram Reel URL.',
+      });
       return;
     }
 
-    setSubmittingUrl(true);
-    setTimeout(() => {
+    try {
+      setSubmittingUrl(true);
+      await submitLiveLink('sub-1', liveReelUrl);
+
       setSubmissions((prev) =>
         prev.map((s) =>
           s.id === 'sub-1'
@@ -77,10 +88,24 @@ export default function ClipperSubmissionsPage() {
             : s
         )
       );
-      setSubmittingUrl(false);
+
+      toast({
+        type: 'success',
+        title: 'Live Link Verified',
+        description: '7-day attribution tracking window opened. Metric snapshots will capture hourly.',
+      });
+
       setShowSubmitLiveUrl(false);
       setLiveReelUrl('');
-    }, 800);
+    } catch (err: any) {
+      toast({
+        type: 'error',
+        title: 'Verification Failed',
+        description: err.message || 'Could not verify Instagram Reel URL.',
+      });
+    } finally {
+      setSubmittingUrl(false);
+    }
   };
 
   return (

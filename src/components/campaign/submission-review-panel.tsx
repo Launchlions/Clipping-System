@@ -26,28 +26,49 @@ interface SubmissionReviewPanelProps {
   onReject: (id: string, comments: string) => Promise<void>;
 }
 
+import { useToast } from '@/components/ui/toast';
+
 export function SubmissionReviewPanel({ submission, onApprove, onReject }: SubmissionReviewPanelProps) {
+  const { toast } = useToast();
   const [comment, setComment] = useState('');
   const [partnershipChecked, setPartnershipChecked] = useState(submission.paidPartnershipConfirmed);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleApprove() {
     if (!partnershipChecked) {
-      alert('You must verify that the content complies with the Paid Partnership disclosure before approving.');
+      toast({
+        type: 'warning',
+        title: 'Paid Partnership Verification Required',
+        description: 'You must confirm compliance with FTC/Meta disclosure regulations before approving.',
+      });
       return;
     }
     setSubmitting(true);
     await onApprove(submission.id, comment);
+    toast({
+      type: 'success',
+      title: 'Submission Approved',
+      description: 'Creator notified to publish to Instagram Reels with brand partnership tags.',
+    });
     setSubmitting(false);
   }
 
   async function handleReject() {
     if (!comment.trim()) {
-      alert('Please provide feedback comments explaining why this edit was rejected.');
+      toast({
+        type: 'warning',
+        title: 'Feedback Required',
+        description: 'Please provide feedback comments explaining the requested revisions.',
+      });
       return;
     }
     setSubmitting(true);
     await onReject(submission.id, comment);
+    toast({
+      type: 'error',
+      title: 'Revision Requested',
+      description: 'Submission marked as revision requested. Feedback sent to creator.',
+    });
     setSubmitting(false);
   }
 

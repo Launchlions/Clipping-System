@@ -20,12 +20,17 @@ import { MetricCard } from '@/components/shared/metric-card';
 import { COMMISSION_RATE } from '@/lib/utils/constants';
 import { cn } from '@/lib/utils/cn';
 
+import { useToast } from '@/components/ui/toast';
+import { useCampaigns } from '@/lib/hooks/use-campaigns';
+
 type PayoutType = 'PER_POST' | 'CPM' | 'HYBRID';
 
 const NICHES = ['Fashion', 'Beauty', 'Fitness', 'Tech', 'Food', 'Gaming', 'Lifestyle', 'Finance', 'Entertainment'];
 
 export default function NewCampaignWizard() {
   const router = useRouter();
+  const { toast } = useToast();
+  const { createCampaign } = useCampaigns();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -76,15 +81,36 @@ export default function NewCampaignWizard() {
       setDonts([...donts, newDont.trim()]);
       setNewDont('');
     }
-  };
-
   const handleLaunch = async () => {
-    setLoading(true);
-    // Simulate campaign creation & escrow authorization
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      setLoading(true);
+      await createCampaign({
+        title: title || 'New Campaign Brief',
+        niche,
+        payoutType,
+        payoutAmountCents: flatPayoutAmount * 100,
+        cpmRateCents: cpmRate * 100,
+        budgetCents: budget * 100,
+        slotsTotal: maxClippers,
+        attributionWindowDays: attributionDays,
+      });
+
+      toast({
+        type: 'success',
+        title: 'Campaign Live & Funded',
+        description: `$${budget.toLocaleString()} escrow authorized. Creators can now view and claim slots.`,
+      });
+
       router.push('/brand/campaigns');
-    }, 1200);
+    } catch (err: any) {
+      toast({
+        type: 'error',
+        title: 'Launch Failed',
+        description: err.message || 'Could not create campaign.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

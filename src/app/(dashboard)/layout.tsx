@@ -15,6 +15,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { ToastProvider } from "@/components/ui/toast";
+
 export const dynamic = "force-dynamic";
 
 export default function DashboardLayout({
@@ -24,7 +26,9 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionProvider basePath="/api/auth">
-      <DashboardInner>{children}</DashboardInner>
+      <ToastProvider>
+        <DashboardInner>{children}</DashboardInner>
+      </ToastProvider>
     </SessionProvider>
   );
 }
